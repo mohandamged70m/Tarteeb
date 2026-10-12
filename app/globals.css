@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-950: #0a0a0a;
+  --color-ink-900: #111214;
+  --color-ink-850: #17181b;
+  --color-ink-800: #1f2125;
+  --color-ink-700: #2a2d33;
+  --color-ink-500: #8a8f98;
+  --color-ink-300: #c9cdd4;
+  --color-ink-100: #f4f5f6;
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Noto Sans Arabic", "Segoe UI Arabic", sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-ink-950);
+  color: var(--color-ink-300);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid #f4f5f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.skeleton {
+  background: var(--color-ink-800);
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  .fade-in {
+    animation: fadein 0.18s ease-out;
+  }
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+textarea {
+  field-sizing: content;
+}
