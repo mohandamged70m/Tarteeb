@@ -63,3 +63,15 @@ Send on `Ctrl/Cmd+Enter`, prominent full-width on Home.
 
 Generic stat-card dashboards, decorative gradients, oversized hero headings,
 charts, emoji-as-status, and any control that looks functional but does nothing.
+
+## 7. Brand assets
+
+- `public/tarteeb-logo-white.svg` (full wordmark) and
+  `public/tarteeb-icon-white.svg` (standalone T) on dark surfaces; black
+  variants kept for future light surfaces. SVG paths are used as supplied.
+- `components/Logo.tsx` (`full` | `icon`) renders explicit width/height
+  (aspect preserved, no layout shift) with `alt="Tarteeb"`.
+- Nav logos link to `/` with `aria-label="Tarteeb home"`; no name text beside
+  the wordmark.
+- Favicon: `app/icon.svg` (Next file convention → served at `/icon`) — black
+  tile + white T at uniform scale for tab-bar contrast.

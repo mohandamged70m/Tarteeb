@@ -18,6 +18,15 @@ export function middleware(req: NextRequest) {
   ) {
     return NextResponse.next();
   }
+  // Static assets under /public (logos, icons) must load for logged-out users
+  // — e.g. the auth screens display the brand logo.
+  if (
+    /\.[a-z0-9]+$/i.test(pathname) ||
+    pathname === "/icon" ||
+    pathname.startsWith("/apple-icon")
+  ) {
+    return NextResponse.next();
+  }
   if (PUBLIC.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next();
   }

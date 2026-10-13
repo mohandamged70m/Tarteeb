@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { SITE_NAME } from "@/lib/brand";
+import Logo from "./Logo";
 
 const NAV = [
   { href: "/", label: "Home", icon: "⌂" },
@@ -37,7 +37,9 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {/* Sidebar (desktop) */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-ink-700 bg-ink-900 md:flex">
         <div className="border-b border-ink-700 px-5 py-4">
-          <span className="text-lg font-semibold tracking-tight text-ink-100">{SITE_NAME}</span>
+          <Link href="/" aria-label="Tarteeb home" className="inline-block">
+            <Logo height={26} />
+          </Link>
         </div>
         <nav aria-label="Primary" className="flex flex-1 flex-col gap-1 p-3">
           {NAV.map((n) => {
@@ -77,7 +79,9 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {/* Content */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-b border-ink-700 bg-ink-900 px-4 py-3 md:hidden">
-          <span className="text-base font-semibold text-ink-100">{SITE_NAME}</span>
+          <Link href="/" aria-label="Tarteeb home" className="inline-block">
+            <Logo height={22} />
+          </Link>
         </header>
         <main className="min-w-0 flex-1 pb-24 md:pb-10">{children}</main>
         {/* Bottom nav (mobile) */}

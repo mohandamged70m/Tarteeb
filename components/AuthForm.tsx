@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SITE_NAME } from "@/lib/brand";
+import Logo from "@/components/Logo";
 import { btnPrimary, Field, inputCls } from "@/components/ui";
 
 export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
@@ -45,8 +45,8 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-xl font-semibold tracking-tight text-ink-100">{SITE_NAME}</p>
-        <h1 className="mt-2 text-2xl font-semibold text-ink-100">
+        <Logo height={30} />
+        <h1 className="mt-3 text-2xl font-semibold text-ink-100">
           {mode === "signin" ? "Welcome back" : "Create your account"}
         </h1>
         <p className="mt-1 text-sm text-ink-500">

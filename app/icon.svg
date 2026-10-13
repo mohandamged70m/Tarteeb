@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="favtitle">
+<title id="favtitle">Tarteeb</title>
+<rect x="1" y="1" width="62" height="62" rx="14" fill="#0A0A0A"/>
+<g transform="translate(8 8) scale(0.5)" fill="#FFFFFF">
+<rect x="4" y="8" width="20" height="24" rx="5"/>
+<path d="M37 8H87Q92 8 92 13V27Q92 32 87 32H37Q32 32 32 27V13Q32 8 37 8Z"/>
+<rect x="36" y="40" width="24" height="22" rx="5"/>
+<rect x="36" y="70" width="24" height="22" rx="5"/>
+</g>
+</svg>
