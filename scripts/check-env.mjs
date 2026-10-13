@@ -1,5 +1,6 @@
 // Read local .env/.env.local without ever printing secret values.
-import { loadEnvConfig } from "@next/env";
+import nextEnv from "@next/env";
+const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
 const env = process.env;
 const errors = [];

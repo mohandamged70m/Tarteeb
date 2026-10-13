@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
         history: history.map((m) => ({ role: m.role === "system" ? "user" : m.role, content: m.content })),
         priorAnswers: answerBlock,
         keyCiphertext: cipher,
+        provider: aiSettings?.provider ?? null,
         model: aiSettings?.model ?? null,
       });
       const proposal = await repo.saveProposal(s.userId, conv.id, result.payload, result.assistantLabel);

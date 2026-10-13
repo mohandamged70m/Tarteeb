@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
         profile: { ...profile, timezone: parsed.data.timezone ?? profile.timezone },
         history: history.map((m) => ({ role: m.role === "system" ? "user" : m.role, content: m.content })),
         keyCiphertext: cipher,
+        provider: aiSettings?.provider ?? null,
         model: aiSettings?.model ?? null,
       });
     } catch (e) {

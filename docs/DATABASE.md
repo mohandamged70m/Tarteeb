@@ -58,7 +58,9 @@ vs AI-suggested — shown separately), `status` (`todo|in_progress|done`),
 (`created|status_changed|edited|task_added|task_updated|confirmed`), `detail`
 short human text (no secrets), timestamps. Index `(order_id, created_at desc)`.
 
-**ai_settings** — `user_id PK`, `provider` (`openai_compatible | offline`),
+**ai_settings** — `user_id PK`, `provider` (`openai | anthropic | google | xai |
+deepseek | offline`; migration `0003` also rewrites legacy `openai_compatible`
+rows to `openai`),
 `model`, `key_ciphertext` (AES-GCM, never returned), `key_hint` (last 4),
 timestamps.
 

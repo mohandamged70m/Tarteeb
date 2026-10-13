@@ -149,7 +149,7 @@ export const settingsPatchSchema = z.object({
 });
 
 export const aiSettingsPutSchema = z.object({
-  provider: z.enum(["openai_compatible", "offline"]).optional(),
+  provider: z.enum(["openai", "anthropic", "google", "xai", "deepseek", "offline"]).optional(),
   model: z.string().min(1).max(80).optional(),
   apiKey: z.string().min(8).max(500).nullable().optional(),
 });

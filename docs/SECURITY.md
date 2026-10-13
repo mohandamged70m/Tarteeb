@@ -36,7 +36,8 @@
 
 - Zod on every input (length caps, enums, uuid/date formats); oversized input
   rejected pre-AI.
-- Fixed `AI_BASE_URL` — no user-supplied URLs (SSRF closed).
+- Fixed provider endpoints (`lib/ai/providers.ts`) — no user-supplied URLs (SSRF
+  closed). `AI_BASE_URL` may override the OpenAI transport only.
 - Dev cookies are HttpOnly + SameSite=Lax and are disabled in production.
 - Supabase identity is verified with `getUser`; middleware refreshes tokens and
   forwards refreshed cookies to pages and the response.

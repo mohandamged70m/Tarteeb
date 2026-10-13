@@ -4,16 +4,28 @@ import { useEffect, useState } from "react";
 import { btnGhost, btnPrimary, Field, inputCls, PageHeader } from "@/components/ui";
 import { CURRENCIES } from "@/lib/currency";
 
+interface ProviderInfo {
+  id: string;
+  label: string;
+  defaultModel: string;
+  models: string[];
+  keyPlaceholder: string;
+  keyHelp: string;
+}
+
 export default function SettingsForm() {
   const [profile, setProfile] = useState({ displayName: "", timezone: "", defaultCurrency: "EGP" });
   const [ai, setAi] = useState<{ provider: string; model: string; keyHint: string | null } | null>(null);
-  const [allowedModels, setAllowedModels] = useState<string[]>([]);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [hasOperatorKey, setHasOperatorKey] = useState(false);
+  const [provider, setProvider] = useState("openai");
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
+
+  const activeProvider = providers.find((p) => p.id === provider) ?? providers[0];
 
   async function load() {
     const [p, a] = await Promise.all([fetch("/api/settings"), fetch("/api/settings/ai")]);
@@ -24,15 +36,30 @@ export default function SettingsForm() {
     if (a.ok) {
       const j = await a.json();
       setAi(j.ai);
-      setAllowedModels(j.allowedModels ?? []);
+      setProviders(j.providers ?? []);
       setHasOperatorKey(Boolean(j.hasOperatorKey));
-      if (j.ai) setModel(j.ai.model);
+      if (j.ai) {
+        const stored = (j.providers as ProviderInfo[] | undefined)?.some((x) => x.id === j.ai.provider)
+          ? j.ai.provider
+          : "openai";
+        setProvider(stored);
+        setModel(j.ai.model);
+      } else if ((j.providers as ProviderInfo[] | undefined)?.length) {
+        setProvider(j.providers[0].id);
+        setModel(j.providers[0].defaultModel);
+      }
     }
   }
 
   useEffect(() => {
     load();
   }, []);
+
+  function changeProvider(id: string) {
+    setProvider(id);
+    const def = providers.find((p) => p.id === id);
+    if (def) setModel(def.defaultModel);
+  }
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -55,7 +82,7 @@ export default function SettingsForm() {
     const res = await fetch("/api/settings/ai", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model: model || undefined, apiKey: apiKey || undefined }),
+      body: JSON.stringify({ provider, model: model.trim() || undefined, apiKey: apiKey || undefined }),
     });
     const j = await res.json().catch(() => null);
     if (!res.ok) {
@@ -91,7 +118,7 @@ export default function SettingsForm() {
     const j = await res.json().catch(() => null);
     setTesting(false);
     if (!res.ok) setErr(j?.error?.message ?? "Connection test failed.");
-    else setMsg(`Connection works (using ${j.which === "user" ? "your" : "operator"} key, model ${j.model}).`);
+    else setMsg(`Connection works (using ${j.which === "user" ? "your" : "operator"} key, ${j.provider} · ${j.model}).`);
   }
 
   return (
@@ -123,19 +150,40 @@ export default function SettingsForm() {
       <form onSubmit={saveAI} className="flex flex-col gap-4 rounded-lg border border-ink-700 bg-ink-900 p-4">
         <h2 className="text-sm font-semibold text-ink-100">AI provider</h2>
         <p className="text-sm text-ink-500">
-          This app uses your own key by default (BYOK) — it is encrypted on the server and never shown again.
+          Bring your own key (BYOK): pick your provider, paste your API key, test, save.
+          Your key is encrypted on the server and never shown again.
           {hasOperatorKey ? " An operator key is also configured as a fallback." : " No operator key is configured."}
           {" "}Without any key, intake uses the labelled offline assistant, and manual order management always works.
         </p>
-        <Field label="Model" hint={`Allowed: ${(allowedModels.join(", ") || "—")}`}>
-          <select value={model} onChange={(e) => setModel(e.target.value)} className={inputCls}>
-            {allowedModels.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label={ai?.keyHint ? `API key (stored: ${ai.keyHint})` : "API key"} hint="Paste to set or replace. Leave blank to keep the current key.">
-          <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={ai?.keyHint ? "•••• — leave blank to keep" : "sk-…"} autoComplete="off" className={inputCls} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Provider">
+            <select value={provider} onChange={(e) => changeProvider(e.target.value)} className={inputCls}>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Model" hint={`Suggestions: ${(activeProvider?.models.join(", ") ?? "—")}`}>
+            <input
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              list="ai-model-suggestions"
+              placeholder={activeProvider?.defaultModel ?? ""}
+              autoComplete="off"
+              className={inputCls}
+            />
+            <datalist id="ai-model-suggestions">
+              {(activeProvider?.models ?? []).map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
+          </Field>
+        </div>
+        <Field
+          label={ai?.keyHint ? `API key (stored: ${ai.keyHint})` : "API key"}
+          hint={`${activeProvider?.keyHelp ?? ""} Paste to set or replace. Leave blank to keep the current key.`}
+        >
+          <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={activeProvider?.keyPlaceholder ?? "…"} autoComplete="off" className={inputCls} />
         </Field>
         <div className="flex flex-wrap gap-2">
           <button type="submit" className={btnPrimary}>Save AI settings</button>

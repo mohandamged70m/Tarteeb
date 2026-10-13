@@ -13,7 +13,7 @@ export type TaskStatus = "todo" | "in_progress" | "done";
 export type ConversationStatus = "open" | "confirmed";
 export type ProposalStatus = "draft" | "ready" | "confirmed" | "superseded";
 export type MessageRole = "user" | "assistant" | "system";
-export type AIProvider = "openai_compatible" | "offline";
+export type AIProvider = "openai" | "anthropic" | "google" | "xai" | "deepseek" | "offline";
 
 /** Permitted order transitions. Anything else is rejected with 422. */
 export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {

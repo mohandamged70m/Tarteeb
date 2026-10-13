@@ -3,7 +3,8 @@ import { getRepo, requireSession } from "@/lib/auth";
 import { fail, ok, parseBody } from "@/lib/api";
 import { aiSettingsPutSchema } from "@/lib/schemas";
 import { encryptSecret, keyHint } from "@/lib/crypto";
-import { ALLOWED_MODELS, DEFAULT_MODEL } from "@/lib/ai/prompts";
+import { PROVIDERS, normalizeStoredProvider } from "@/lib/ai/providers";
+import { DEFAULT_MODEL } from "@/lib/ai/prompts";
 
 export async function GET() {
   try {
@@ -11,7 +12,7 @@ export async function GET() {
     const ai = await getRepo().getAISettings(s.userId);
     return ok({
       ai: ai ? { provider: ai.provider, model: ai.model, keyHint: ai.keyHint } : null,
-      allowedModels: ALLOWED_MODELS,
+      providers: PROVIDERS,
       hasOperatorKey: Boolean(process.env.AI_OPERATOR_KEY),
     });
   } catch {
@@ -34,9 +35,6 @@ export async function PUT(req: NextRequest) {
   const existing = await repo.getAISettings(s.userId);
   const cipher = await repo.getAIKeyCiphertext(s.userId);
 
-  if (d.model && !ALLOWED_MODELS.includes(d.model)) {
-    return fail("validation", `Model must be one of: ${ALLOWED_MODELS.join(", ")}`, { status: 400 });
-  }
   let keyCiphertext = cipher;
   let hint = existing?.keyHint ?? null;
   if (d.apiKey === null) {
@@ -52,8 +50,10 @@ export async function PUT(req: NextRequest) {
   }
   const saved = await repo.saveAISettings(s.userId, {
     userId: s.userId,
-    provider: d.provider ?? existing?.provider ?? (keyCiphertext ? "openai_compatible" : "offline"),
-    model: d.model ?? existing?.model ?? DEFAULT_MODEL,
+    provider: d.provider
+      ?? normalizeStoredProvider(existing?.provider)
+      ?? (keyCiphertext ? "openai" : "offline"),
+    model: d.model?.trim() || existing?.model || DEFAULT_MODEL,
     keyHint: hint,
     updatedAt: new Date().toISOString(),
     keyCiphertext,

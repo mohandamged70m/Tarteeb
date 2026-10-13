@@ -32,11 +32,13 @@ export async function chatCompletionsJSON(opts: {
   model: string;
   messages: ChatTurn[];
   timeoutMs?: number;
+  /** Fixed provider base URL. Defaults to AI_BASE_URL (OpenAI). */
+  baseUrl?: string;
 }): Promise<string> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? AI_TIMEOUT_MS);
   try {
-    const res = await fetch(`${AI_BASE_URL}/chat/completions`, {
+    const res = await fetch(`${opts.baseUrl ?? AI_BASE_URL}/chat/completions`, {
       method: "POST",
       signal: ctrl.signal,
       headers: {

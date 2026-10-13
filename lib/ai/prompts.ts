@@ -1,10 +1,5 @@
 /** System prompt + intake helpers. Client messages are untrusted data. */
 
-export const ALLOWED_MODELS = (process.env.AI_ALLOWED_MODELS ?? "gpt-4o-mini,gpt-4o")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
 export const DEFAULT_MODEL = process.env.AI_OPERATOR_MODEL ?? "gpt-4o-mini";
 export const AI_BASE_URL = process.env.AI_BASE_URL ?? "https://api.openai.com/v1";
 export const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 45000) || 45000;

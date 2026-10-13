@@ -19,7 +19,9 @@ flowchart LR
    for?”, a large rounded composer (~760px desktop, fluid mobile), and 3 subtle
    example-message chips (EN landing page, AR logo request, mixed-language edit
    round) → click fills the composer without submitting. No dashboard cards or stats.
-4. Optional: Settings → AI → paste key → Test connection → Save.
+4. Optional: Settings → AI → pick a provider (OpenAI, Anthropic, Google, xAI,
+    DeepSeek), paste your API key → Test connection → Save. Without any key the
+    labelled offline assistant is used.
 
 ## 2. Intake — happy path (complete request)
 

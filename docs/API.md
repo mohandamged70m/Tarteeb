@@ -29,8 +29,8 @@ created/updated resource only **after commit**.
 | `GET /api/clients/:id` | detail + related orders | ownership 403 |
 | `PATCH /api/clients/:id` | edit | — |
 | `GET /api/settings`, `PATCH /api/settings` | profile/timezone/currency | IANA tz + ISO currency validated |
-| `GET /api/settings/ai` | provider/model/keyHint (never the key) | — |
-| `PUT /api/settings/ai` | set provider/model/key | key ≥8 chars; allowlisted model |
+| `GET /api/settings/ai` | provider/model/keyHint (never the key) + provider registry (id/label/models/default) | — |
+| `PUT /api/settings/ai` | set provider/model/key | provider ∈ `openai|anthropic|google|xai|deepseek|offline`; model 1–80 chars; key ≥8 chars |
 
 ## Errors
 
