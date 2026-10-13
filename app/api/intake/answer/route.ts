@@ -55,6 +55,6 @@ export async function POST(req: NextRequest) {
       throw e;
     }
   } catch (e) {
-    return fail("provider", (e as Error).message, { status: 500 });
+    return fail("provider", "Could not complete the request. Please retry.", { status: 500 });
   }
 }

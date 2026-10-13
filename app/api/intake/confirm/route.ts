@@ -24,24 +24,23 @@ export async function POST(req: NextRequest) {
   try {
     const conv = await repo.getConversation(s.userId, d.conversationId);
     if (!conv) return fail("not_found", "Conversation not found.", { status: 404 });
-    if (conv.status === "confirmed") {
-      // Possibly a retry after success: return the existing order.
-      const existing = await repo.findOrderByIdempotency(s.userId, d.idempotencyKey);
-      if (existing) return ok({ order: existing, created: false });
-      const prop = await repo.getProposal(s.userId, d.proposalId);
-      if (prop?.status === "confirmed") {
-        const order = await repo.orderForProposal(s.userId, prop.id);
-        if (order) return ok({ order, created: false });
-      }
-      return fail("conflict", "This intake already created an order.", { status: 409 });
-    }
     const prop = await repo.getProposal(s.userId, d.proposalId);
-    if (!prop) return fail("not_found", "Proposal not found.", { status: 404 });
-    if (prop.status === "confirmed") {
+    if (!prop || prop.conversationId !== conv.id) {
+      return fail("not_found", "Proposal not found in this conversation.", { status: 404 });
+    }
+    const existing = await repo.findOrderByIdempotency(s.userId, d.idempotencyKey);
+    if (existing) {
+      if (existing.conversationId !== conv.id || existing.proposalId !== prop.id) {
+        return fail("conflict", "This confirmation key belongs to another intake.", { status: 409 });
+      }
+      return ok({ order: existing, created: false });
+    }
+    if (conv.status === "confirmed" || prop.status === "confirmed") {
       const order = await repo.orderForProposal(s.userId, prop.id);
       if (order) return ok({ order, created: false });
-      return fail("conflict", "Proposal already confirmed.", { status: 409 });
+      return fail("conflict", "This intake already created an order.", { status: 409 });
     }
+    if (prop.status === "superseded") return fail("conflict", "Review the latest proposal before confirming.", { status: 409 });
     if (d.clientId) {
       const client = await repo.getClient(s.userId, d.clientId);
       if (!client) return fail("forbidden", "Client does not belong to this account.", { status: 403 });
@@ -70,6 +69,6 @@ export async function POST(req: NextRequest) {
     if (/not owned|not found/.test(msg)) {
       return fail("forbidden", msg, { status: 403 });
     }
-    return fail("provider", msg, { status: 500 });
+    return fail("provider", "Could not confirm the order. Retry with the same confirmation key.", { status: 500, retryable: true });
   }
 }

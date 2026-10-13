@@ -13,7 +13,9 @@ const NAV = [
 ];
 
 async function signOut(router: ReturnType<typeof useRouter>) {
-  await fetch("/api/auth/signout", { method: "POST" });
+  const res = await fetch("/api/auth/signout", { method: "POST" });
+  if (!res.ok) throw new Error("Could not sign out. Please retry.");
+  window.localStorage.removeItem("tarteeb:lastConv");
   router.push("/login");
   router.refresh();
 }
@@ -22,6 +24,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  async function handleSignOut() {
+    setSigningOut(true);
+    setSignOutError(null);
+    try { await signOut(router); }
+    catch { setSignOutError("Could not sign out. Please retry."); }
+    finally { setSigningOut(false); }
+  }
   const bare = pathname === "/login" || pathname === "/signup";
 
   if (bare) {
@@ -65,10 +75,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             disabled={signingOut}
-            onClick={async () => {
-              setSigningOut(true);
-              await signOut(router);
-            }}
+            onClick={handleSignOut}
             className="w-full rounded-md px-3 py-2 text-left text-sm text-ink-500 hover:bg-ink-800 hover:text-ink-300 disabled:opacity-50"
           >
             {signingOut ? "Signing out…" : "Sign out"}
@@ -78,12 +85,18 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
       {/* Content */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-ink-700 bg-ink-900 px-4 py-3 md:hidden">
+        <header className="flex items-center justify-between border-b border-ink-700 bg-ink-900 px-4 py-3 md:hidden">
           <Link href="/" aria-label="Tarteeb home" className="inline-block">
             <Logo height={22} />
           </Link>
+          <button type="button" onClick={handleSignOut} disabled={signingOut} className="min-h-11 px-3 text-sm text-ink-300 disabled:opacity-50">
+            {signingOut ? "Signing out…" : "Sign out"}
+          </button>
         </header>
-        <main className="min-w-0 flex-1 pb-24 md:pb-10">{children}</main>
+        <main className="min-w-0 flex-1 pb-24 md:pb-10">
+          {signOutError && <p role="alert" className="px-4 py-3 text-sm text-ink-100">{signOutError}</p>}
+          {children}
+        </main>
         {/* Bottom nav (mobile) */}
         <nav
           aria-label="Primary"

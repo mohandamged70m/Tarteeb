@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     await repo.addMessage(s.userId, conv.id, "assistant", assistantText);
     return ok({ proposal, assistantText });
   } catch (e) {
-    return fail("provider", (e as Error).message, { status: 500 });
+    return fail("provider", "Could not complete the request. Please retry.", { status: 500 });
   }
 }
 

@@ -77,3 +77,14 @@ What is sent to the provider: the fenced client message + conversation history o
 the intake + profile timezone/currency (for resolution) + system instructions.
 Never: API keys, other users' data, full DB rows. Routine logs exclude message
 content (see `docs/SECURITY.md`).
+
+## Launch fixes
+
+Offline refinement reuses the user-message history and answers; its output also
+passes the proposal Zod schema. The preview remounts for each proposal revision
+so new values replace the prior seed. Confirmation preserves the explicit/client
+flag for unchanged task titles; manually rewritten/new tasks default to suggested.
+Network confirmation failures retain the same idempotency key for a safe retry.
+
+Offline money parsing requires an amount next to a currency or a direct budget/
+price label. Section counts and dates elsewhere in a request are not prices.

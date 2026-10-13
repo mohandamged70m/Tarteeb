@@ -29,6 +29,7 @@ export default function NewOrderForm() {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    try {
     let cid: string | null = clientId || null;
     if (!cid && newClient.trim()) {
       const cr = await fetch("/api/clients", {
@@ -36,7 +37,8 @@ export default function NewOrderForm() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name: newClient.trim() }),
       });
-      if (cr.ok) cid = (await cr.json()).client.id;
+      if (!cr.ok) { setError("Could not create the client. Please retry."); return; }
+      cid = (await cr.json()).client.id;
     }
     const res = await fetch("/api/orders", {
       method: "POST",
@@ -58,6 +60,8 @@ export default function NewOrderForm() {
       return;
     }
     router.push(`/orders/${j.order.id}`);
+    } catch { setError("Could not connect. Please try again."); }
+    finally { setBusy(false); }
   }
 
   return (

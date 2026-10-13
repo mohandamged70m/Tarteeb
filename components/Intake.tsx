@@ -33,11 +33,13 @@ export default function Intake({ initialId }: { initialId: string | null }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadConvs = useCallback(async () => {
+    try {
     const res = await fetch("/api/conversations");
     if (res.ok) {
       const j = await res.json();
       setConvs(j.conversations);
     }
+    } catch { setLoadError("Could not load conversation history. Retry shortly."); }
   }, []);
 
   const loadThread = useCallback(async (id: string) => {
@@ -60,7 +62,7 @@ export default function Intake({ initialId }: { initialId: string | null }) {
     loadConvs();
     fetch("/api/clients").then((r) => (r.ok ? r.json() : null)).then((j) => {
       if (j) setClients(j.clients);
-    });
+    }).catch(() => setLoadError("Could not load clients. Retry shortly."));
     const saved = initialId ?? window.localStorage.getItem("tarteeb:lastConv");
     if (saved) {
       setCurrentId(saved);
@@ -73,17 +75,24 @@ export default function Intake({ initialId }: { initialId: string | null }) {
   }, [thread?.messages.length]);
 
   async function startNew() {
+    setLoadError(null);
+    try {
     const res = await fetch("/api/conversations", { method: "POST" });
-    if (!res.ok) return;
+    if (!res.ok) throw new Error("Could not start a new intake. Retry shortly.");
     const j = await res.json();
     setCurrentId(j.conversation.id);
     setThread({ conversation: j.conversation, messages: [], proposal: null, orderId: null });
     setDraft("");
     await loadConvs();
+    } catch { setLoadError("Could not start a new intake. Retry shortly."); }
   }
 
   async function send() {
     if (!draft.trim() || sendState === "sending") return;
+    setSendState("sending");
+    const content = draft;
+    setSendError(null);
+    try {
     let id = currentId;
     if (!id) {
       const res = await fetch("/api/conversations", { method: "POST" });
@@ -97,11 +106,7 @@ export default function Intake({ initialId }: { initialId: string | null }) {
       setCurrentId(id);
       await loadConvs();
     }
-    const content = draft;
     setDraft("");
-    setSendState("sending");
-    setSendError(null);
-    try {
       const res = await fetch("/api/intake/message", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -132,7 +137,7 @@ export default function Intake({ initialId }: { initialId: string | null }) {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink-100">New intake</h1>
           <p className="mt-1 text-sm text-ink-500">
@@ -243,6 +248,7 @@ export default function Intake({ initialId }: { initialId: string | null }) {
 
       {proposal && !confirmed && (
         <ClarifyAndPreview
+          key={proposal.id}
           proposal={proposal}
           conversationId={thread!.conversation.id}
           clients={clients}
@@ -322,6 +328,7 @@ function ClarifyAndPreview({
     if (filled.length === 0) return;
     setBusy(true);
     setError(null);
+    try {
     const res = await fetch("/api/intake/answer", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -334,12 +341,15 @@ function ClarifyAndPreview({
       return;
     }
     await onRefresh();
+    } catch { setError("Could not connect. Your answers are preserved — retry."); }
+    finally { setBusy(false); }
   }
 
   async function confirm() {
     if (confirmState === "pending" || confirmState === "done") return;
     setConfirmState("pending");
     setConfirmError(null);
+    try {
     const res = await fetch("/api/intake/confirm", {
       method: "POST",
       headers: { "content-type": "application/json", "Idempotency-Key": idemKey.current },
@@ -357,7 +367,7 @@ function ClarifyAndPreview({
         deadlineText: p.deadline.textOriginal,
         budgetAmount: amount ? Number(amount) : null,
         budgetCurrency: currency || null,
-        tasks: tasks.split("\n").map((s) => s.trim()).filter(Boolean).map((t) => ({ title: t, isClientRequirement: false })),
+        tasks: tasks.split("\n").map((s) => s.trim()).filter(Boolean).map((t) => ({ title: t, isClientRequirement: p.tasks.find((original) => original.title.trim() === t)?.isClientRequirement ?? false })),
       }),
     });
     const j = await res.json().catch(() => null);
@@ -369,6 +379,10 @@ function ClarifyAndPreview({
     setConfirmState("done");
     setOrderId(j.order.id);
     await onRefresh();
+    } catch {
+      setConfirmState("error");
+      setConfirmError("Could not connect. Retry this confirmation — the same key prevents duplicate orders.");
+    }
   }
 
   return (

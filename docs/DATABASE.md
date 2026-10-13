@@ -1,6 +1,6 @@
 # Database
 
-Source of truth for production: `supabase/migrations/0001_init.sql`.
+Source of truth: ordered SQL migrations in `supabase/migrations/` (0001 + 0002).
 The local dev store mirrors this shape (see `lib/repo.local.ts`).
 
 ## 1. Schema
@@ -89,3 +89,15 @@ tasks, marks proposal confirmed, writes activity in one transaction; the unique
 `(user_id, idempotency_key)` constraint makes retries return the existing row.
 Local backend: single synchronous write batch under one file lock-equivalent
 (await chain + atomic rename). See `docs/API.md`.
+
+## Public-launch hardening (0002)
+
+Browser writes to app tables are revoked; Next.js routes validate inputs and use
+the server service role after verifying the session. Owner-filtered RLS reads
+remain available, except AI settings, which are server-only. Privileged RPCs
+are executable only by service_role. Confirmation uses an owner advisory lock,
+checks the proposal belongs to the supplied conversation, qualifies SQL column
+names, and enforces one order per conversation/proposal. Retries return an
+existing order; reusing a key across intakes is rejected. Manual order creation
+and its task/activity inserts execute in one transaction. Shared rate-limit
+buckets store salted identity hashes and expiry; timestamps update via triggers.

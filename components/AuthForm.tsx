@@ -6,18 +6,21 @@ import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import { btnPrimary, Field, inputCls } from "@/components/ui";
 
-export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
+export function AuthForm({ mode, initialError }: { mode: "signin" | "signup"; initialError?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setNotice(null);
+    try {
     const res = await fetch(mode === "signin" ? "/api/auth/signin" : "/api/auth/signup", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -38,8 +41,15 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       setError(j?.error?.message ?? "Authentication failed.");
       return;
     }
+    if (j?.requiresEmailConfirmation) {
+      setNotice("Check your inbox. Open the confirmation link to finish creating your account, then sign in.");
+      return;
+    }
     router.push("/");
     router.refresh();
+    } catch {
+      setError("Could not connect. Please try again.");
+    } finally { setBusy(false); }
   }
 
   return (
@@ -63,8 +73,9 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" className={inputCls} />
         </Field>
         <Field label="Password" hint={mode === "signup" ? "Minimum 8 characters." : undefined}>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete={mode === "signin" ? "current-password" : "new-password"} className={inputCls} />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === "signup" ? 8 : 1} maxLength={200} autoComplete={mode === "signin" ? "current-password" : "new-password"} className={inputCls} />
         </Field>
+        {notice && <p role="status" className="rounded-md border border-ink-700 p-3 text-sm text-ink-100">{notice}</p>}
         {error && <p role="alert" className="text-sm text-ink-100">{error}</p>}
         <button type="submit" disabled={busy} className={btnPrimary}>
           {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Sign up"}

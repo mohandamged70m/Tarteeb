@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { randomUUID } from "crypto";
 import { getRepo, makeDevSession, DEV_COOKIE } from "@/lib/auth";
-import { isSupabaseConfigured, supabaseServer, supabaseAdmin } from "@/lib/supabase";
+import { isSupabaseConfigured, supabaseServer } from "@/lib/supabase";
 import { signupSchema } from "@/lib/schemas";
 import { fail, ok, parseBody } from "@/lib/api";
 import { isValidIANA } from "@/lib/dates";
@@ -18,20 +18,15 @@ export async function POST(req: NextRequest) {
     const { data, error } = await sb.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName, timezone: timezone ?? "UTC", default_currency: defaultCurrency ?? "EGP" },
+        emailRedirectTo: `${process.env.APP_URL ?? req.nextUrl.origin}/auth/confirm`,
+      },
     });
     if (error) return fail("validation", error.message, { status: 400 });
     const user = data.user;
     if (!user) return fail("provider", "Signup failed.", { status: 500 });
-    // Enrich the trigger-created profile with prefs.
-    try {
-      const admin = supabaseAdmin();
-      await admin.from("profiles").update({
-        timezone: timezone && isValidIANA(timezone) ? timezone : "UTC",
-        default_currency: defaultCurrency ?? "EGP",
-      }).eq("user_id", user.id);
-    } catch { /* non-fatal */ }
-    return ok({ userId: user.id, email: user.email });
+    return ok({ requiresEmailConfirmation: !data.session });
   }
 
   // Local dev backend.

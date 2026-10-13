@@ -71,3 +71,11 @@ Delivered/Completed/Cancelled.
 Clients → New: name (required), contact (optional), notes. Detail shows related
 orders. During intake, AI-suggested client appears as “suggested: Ahmed (new)” with
 [Use existing ▾] / [Create “Ahmed”] — never auto-created.
+
+## Public signup and mobile session management
+
+With Supabase email confirmation enabled, signup shows an inbox confirmation
+notice; the token-hash link establishes a server session. Invalid links return to
+login with feedback. Mobile and desktop both offer sign-out. Refined proposal
+revisions refresh the editable preview. Network failures restore send/confirm
+controls and preserve the confirmation key.
