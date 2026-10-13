@@ -306,7 +306,8 @@ export const localRepo: Repo = {
     const conv = db.conversations.find((c) => c.userId === userId && c.id === data.conversationId);
     if (!conv) throw new Error("conversation not found");
     const prop = db.proposals.find((p) => p.userId === userId && p.id === data.proposalId);
-    if (!prop) throw new Error("proposal not found");
+    if (!prop || prop.conversationId !== data.conversationId) throw new Error("proposal not owned by conversation");
+    if (prop.status === "superseded") throw new Error("proposal is no longer current");
     let clientId = data.clientId;
     if (clientId) {
       const ok = db.clients.some((c) => c.userId === userId && c.id === clientId);

@@ -32,12 +32,21 @@ function detectCurrency(text: string): string | null {
   return null;
 }
 
-function detectAmount(text: string): number | null {
-  const m = text.replace(/,/g, "").match(/(\d+(?:\.\d+)?)\s*(?:EGP|USD|EUR|SAR|AED|جنيه|جنى|ج\.م|دولار|ريال|درهم|\$|€)?/i);
-  // Only treat as budget if money context exists
-  if (!m || !/(EGP|USD|EUR|SAR|AED|جنيه|جنى|ج\.م|دولار|ريال|درهم|\$|€|budget|ميزانية|مبلغ|سعر|تكلفة|price|budget)/i.test(text)) return null;
-  const n = Number(m[1]);
-  return Number.isFinite(n) ? n : null;
+function detectMoney(text: string): { amount: number | null; currency: string | null } {
+  const normalized = text
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/(\d),(?=\d{3}(?:\D|$))/g, "$1");
+  const number = "(\\d+(?:\\.\\d+)?)";
+  const currency = "(?:EGP|USD|EUR|SAR|AED|جنيه|جنى|ج\\.?\\s*م|دولار|ريال|درهم|\\$|€)";
+  // Require a nearby money token or a direct budget/price label. Counts and
+  // calendar dates elsewhere in the request are never treated as prices.
+  const adjacent = normalized.match(new RegExp(`${number}\\s*${currency}(?![a-z])`, "i"))
+    ?? normalized.match(new RegExp(`${currency}\\s*${number}`, "i"));
+  const labeled = normalized.match(new RegExp(`(?:budget|price|ميزانية|الميزانية|مبلغ|سعر|تكلفة)\\s*(?:(?:is|of|about|around)\\s*)?[:=~]?\\s*${number}`, "i"));
+  const match = adjacent ?? labeled;
+  const amount = match ? Number(match[1]) : null;
+  return { amount: amount !== null && Number.isFinite(amount) ? amount : null, currency: match ? detectCurrency(match[0]) : null };
 }
 
 function detectLanguage(text: string): "en" | "ar" | "mixed" {
@@ -160,8 +169,7 @@ export function extractOffline(message: string, ctx: Ctx): ProposalPayload {
   const kind = detectKind(message);
   const clientName = detectClient(message);
   const deadline = detectDeadline(message, ctx);
-  const amount = detectAmount(message);
-  const currency = detectCurrency(message);
+  const { amount, currency } = detectMoney(message);
 
   const missingEssential: ProposalPayload["missingEssential"] = [];
   if (kind.deliverables.length === 0) {

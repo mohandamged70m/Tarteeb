@@ -107,12 +107,12 @@ const mapTask = (r: Record<string, unknown>): OrderTask => ({
 export const supabaseRepo: Repo = {
   async getProfile(userId) {
     const db = supabaseAdmin();
-    const { data } = await db.from("profiles").select("*").eq("user_id", userId).maybeSingle();
+    const { data } = await db.from("profiles").select("*").eq("user_id", userId).maybeSingle().throwOnError();
     return data ? mapProfile(data) : null;
   },
   async getProfileByEmail(email) {
     const db = supabaseAdmin();
-    const { data } = await db.from("profiles").select("*").ilike("email", email).maybeSingle();
+    const { data } = await db.from("profiles").select("*").ilike("email", email).maybeSingle().throwOnError();
     return data ? mapProfile(data) : null;
   },
   async createProfile(p) {
@@ -131,7 +131,7 @@ export const supabaseRepo: Repo = {
       })
       .eq("user_id", userId)
       .select()
-      .single();
+      .single().throwOnError();
     return mapProfile(must(data, "profile"));
   },
   async verifyPassword() {
@@ -142,90 +142,90 @@ export const supabaseRepo: Repo = {
     const db = supabaseAdmin();
     let q = db.from("clients").select("*").eq("user_id", userId).order("name");
     if (search) q = q.ilike("name", `%${search}%`);
-    const { data } = await q;
+    const { data } = await q.throwOnError();
     return (data ?? []).map(mapClient);
   },
   async getClient(userId, id) {
     const db = supabaseAdmin();
-    const { data } = await db.from("clients").select("*").eq("user_id", userId).eq("id", id).maybeSingle();
+    const { data } = await db.from("clients").select("*").eq("user_id", userId).eq("id", id).maybeSingle().throwOnError();
     return data ? mapClient(data) : null;
   },
   async createClient(userId, d) {
     const db = supabaseAdmin();
-    const { data } = await db.from("clients").insert({ user_id: userId, name: d.name, contact: d.contact, notes: d.notes }).select().single();
+    const { data } = await db.from("clients").insert({ user_id: userId, name: d.name, contact: d.contact, notes: d.notes }).select().single().throwOnError();
     return mapClient(must(data, "client"));
   },
   async updateClient(userId, id, patch) {
     const db = supabaseAdmin();
-    const { data } = await db.from("clients").update({ name: patch.name, contact: patch.contact, notes: patch.notes }).eq("user_id", userId).eq("id", id).select().maybeSingle();
+    const { data } = await db.from("clients").update({ name: patch.name, contact: patch.contact, notes: patch.notes }).eq("user_id", userId).eq("id", id).select().maybeSingle().throwOnError();
     return data ? mapClient(data) : null;
   },
   async deleteClient(userId, id) {
     const db = supabaseAdmin();
-    const { count } = await db.from("orders").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("client_id", id);
+    const { count } = await db.from("orders").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("client_id", id).throwOnError();
     if ((count ?? 0) > 0) return false;
-    const { error } = await db.from("clients").delete().eq("user_id", userId).eq("id", id);
+    const { error } = await db.from("clients").delete().eq("user_id", userId).eq("id", id).throwOnError();
     return !error;
   },
 
   async listConversations(userId) {
     const db = supabaseAdmin();
-    const { data } = await db.from("conversations").select("*").eq("user_id", userId).order("updated_at", { ascending: false });
+    const { data } = await db.from("conversations").select("*").eq("user_id", userId).order("updated_at", { ascending: false }).throwOnError();
     return (data ?? []).map(mapConv);
   },
   async getConversation(userId, id) {
     const db = supabaseAdmin();
-    const { data } = await db.from("conversations").select("*").eq("user_id", userId).eq("id", id).maybeSingle();
+    const { data } = await db.from("conversations").select("*").eq("user_id", userId).eq("id", id).maybeSingle().throwOnError();
     return data ? mapConv(data) : null;
   },
   async createConversation(userId, title) {
     const db = supabaseAdmin();
-    const { data } = await db.from("conversations").insert({ user_id: userId, title }).select().single();
+    const { data } = await db.from("conversations").insert({ user_id: userId, title }).select().single().throwOnError();
     return mapConv(must(data, "conversation"));
   },
   async updateConversation(userId, id, patch) {
     const db = supabaseAdmin();
-    const { data } = await db.from("conversations").update({ title: patch.title, status: patch.status }).eq("user_id", userId).eq("id", id).select().maybeSingle();
+    const { data } = await db.from("conversations").update({ title: patch.title, status: patch.status }).eq("user_id", userId).eq("id", id).select().maybeSingle().throwOnError();
     return data ? mapConv(data) : null;
   },
   async listMessages(userId, conversationId) {
     const db = supabaseAdmin();
-    const conv = await db.from("conversations").select("id").eq("user_id", userId).eq("id", conversationId).maybeSingle();
+    const conv = await db.from("conversations").select("id").eq("user_id", userId).eq("id", conversationId).maybeSingle().throwOnError();
     if (!conv.data) return [];
-    const { data } = await db.from("messages").select("*").eq("conversation_id", conversationId).order("created_at");
+    const { data } = await db.from("messages").select("*").eq("conversation_id", conversationId).eq("user_id", userId).order("created_at").throwOnError();
     return (data ?? []).map(mapMsg);
   },
   async addMessage(userId, conversationId, role, content) {
     const db = supabaseAdmin();
-    const conv = await db.from("conversations").select("id").eq("user_id", userId).eq("id", conversationId).maybeSingle();
+    const conv = await db.from("conversations").select("id").eq("user_id", userId).eq("id", conversationId).maybeSingle().throwOnError();
     if (!conv.data) throw new Error("conversation not found");
-    const { data } = await db.from("messages").insert({ conversation_id: conversationId, user_id: userId, role, content }).select().single();
+    const { data } = await db.from("messages").insert({ conversation_id: conversationId, user_id: userId, role, content }).select().single().throwOnError();
     return mapMsg(must(data, "message"));
   },
 
   async latestProposal(userId, conversationId) {
     const db = supabaseAdmin();
-    const { data } = await db.from("proposals").select("*").eq("user_id", userId).eq("conversation_id", conversationId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data } = await db.from("proposals").select("*").eq("user_id", userId).eq("conversation_id", conversationId).order("created_at", { ascending: false }).limit(1).maybeSingle().throwOnError();
     return data ? mapProposal(data) : null;
   },
   async getProposal(userId, id) {
     const db = supabaseAdmin();
-    const { data } = await db.from("proposals").select("*").eq("user_id", userId).eq("id", id).maybeSingle();
+    const { data } = await db.from("proposals").select("*").eq("user_id", userId).eq("id", id).maybeSingle().throwOnError();
     return data ? mapProposal(data) : null;
   },
   async saveProposal(userId, conversationId, payload, assistantLabel) {
     const db = supabaseAdmin();
-    await db.from("proposals").update({ status: "superseded" }).eq("user_id", userId).eq("conversation_id", conversationId).neq("status", "confirmed");
+    await db.from("proposals").update({ status: "superseded" }).eq("user_id", userId).eq("conversation_id", conversationId).neq("status", "confirmed").throwOnError();
     const { data } = await db.from("proposals").insert({
       user_id: userId, conversation_id: conversationId, payload,
       status: payload.missingEssential.length > 0 ? "draft" : "ready",
       assistant_label: assistantLabel,
-    }).select().single();
+    }).select().single().throwOnError();
     return mapProposal(must(data, "proposal"));
   },
   async markProposal(userId, id, status) {
     const db = supabaseAdmin();
-    await db.from("proposals").update({ status }).eq("user_id", userId).eq("id", id);
+    await db.from("proposals").update({ status }).eq("user_id", userId).eq("id", id).throwOnError();
   },
 
   async listOrders(userId, opts) {
@@ -235,7 +235,7 @@ export const supabaseRepo: Repo = {
     if (opts.clientId) q = q.eq("client_id", opts.clientId);
     if (opts.search) q = q.ilike("title", `%${opts.search}%`);
     q = opts.sort === "due" ? q.order("deadline_date", { ascending: true, nullsFirst: false }) : q.order("created_at", { ascending: false });
-    const { data } = await q;
+    const { data } = await q.throwOnError();
     return (data ?? []).map((r: Record<string, unknown>) => ({
       ...mapOrder(r),
       clientName: ((r["clients"] as Record<string, unknown> | null)?.["name"] as string) ?? null,
@@ -243,37 +243,24 @@ export const supabaseRepo: Repo = {
   },
   async getOrder(userId, id) {
     const db = supabaseAdmin();
-    const { data } = await db.from("orders").select("*").eq("user_id", userId).eq("id", id).maybeSingle();
+    const { data } = await db.from("orders").select("*").eq("user_id", userId).eq("id", id).maybeSingle().throwOnError();
     return data ? mapOrder(data) : null;
   },
   async findOrderByIdempotency(userId, key) {
     const db = supabaseAdmin();
-    const { data } = await db.from("orders").select("*").eq("user_id", userId).eq("idempotency_key", key).maybeSingle();
+    const { data } = await db.from("orders").select("*").eq("user_id", userId).eq("idempotency_key", key).maybeSingle().throwOnError();
     return data ? mapOrder(data) : null;
   },
   async orderForProposal(userId, proposalId) {
     const db = supabaseAdmin();
-    const { data } = await db.from("orders").select("*").eq("user_id", userId).eq("proposal_id", proposalId).maybeSingle();
+    const { data } = await db.from("orders").select("*").eq("user_id", userId).eq("proposal_id", proposalId).maybeSingle().throwOnError();
     return data ? mapOrder(data) : null;
   },
   async createOrderManual(userId, data: ManualOrderData) {
     const db = supabaseAdmin();
-    if (data.clientId) {
-      const c = await db.from("clients").select("id").eq("user_id", userId).eq("id", data.clientId).maybeSingle();
-      if (!c.data) throw new Error("client not owned");
-    }
-    const { data: order } = await db.from("orders").insert({
-      user_id: userId, client_id: data.clientId, title: data.title, description: data.description,
-      deliverables: data.deliverables, requirements: data.requirements,
-      deadline_date: data.deadlineDate, deadline_text: data.deadlineText, timezone: data.timezone,
-      budget_amount: data.budgetAmount, budget_currency: data.budgetCurrency, status: "draft",
-    }).select().single();
-    const o = mapOrder(must(order, "order"));
-    if (data.tasks.length) {
-      await db.from("order_tasks").insert(data.tasks.map((t, i) => ({ order_id: o.id, user_id: userId, title: t.title, is_client_requirement: t.isClientRequirement, position: i })));
-    }
-    await db.from("order_activity").insert({ order_id: o.id, user_id: userId, kind: "created", detail: "Order created" });
-    return o;
+    const { data: out, error } = await db.rpc("create_order_manual", { p_user_id: userId, p_data: data });
+    if (error) throw new Error("Could not create the order");
+    return mapOrder(must(out, "order") as Record<string, unknown>);
   },
   /** Atomic via the confirm_intake RPC; idempotent on (user_id, idempotency_key). */
   async confirmIntake(userId, data: ConfirmData) {
@@ -303,7 +290,7 @@ export const supabaseRepo: Repo = {
   },
   async updateOrder(userId, id, patch) {
     const db = supabaseAdmin();
-    const before = await db.from("orders").select("status").eq("user_id", userId).eq("id", id).maybeSingle();
+    const before = await db.from("orders").select("status").eq("user_id", userId).eq("id", id).maybeSingle().throwOnError();
     if (!before.data) return null;
     const { data } = await db.from("orders").update({
       title: patch.title, description: patch.description, client_id: patch.clientId,
@@ -311,50 +298,50 @@ export const supabaseRepo: Repo = {
       deadline_date: patch.deadlineDate, deadline_text: patch.deadlineText,
       budget_amount: patch.budgetAmount, budget_currency: patch.budgetCurrency,
       status: patch.status,
-    }).eq("user_id", userId).eq("id", id).select().maybeSingle();
+    }).eq("user_id", userId).eq("id", id).select().maybeSingle().throwOnError();
     if (!data) return null;
     const prev = (before.data as Record<string, string>)["status"];
     if (patch.status && patch.status !== prev) {
-      await db.from("order_activity").insert({ order_id: id, user_id: userId, kind: "status_changed", detail: `Status: ${prev} → ${patch.status}` });
+      await db.from("order_activity").insert({ order_id: id, user_id: userId, kind: "status_changed", detail: `Status: ${prev} → ${patch.status}` }).throwOnError();
     }
     return mapOrder(data);
   },
   async listTasks(userId, orderId) {
     const db = supabaseAdmin();
-    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle();
+    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle().throwOnError();
     if (!order.data) return [];
-    const { data } = await db.from("order_tasks").select("*").eq("order_id", orderId).order("position");
+    const { data } = await db.from("order_tasks").select("*").eq("order_id", orderId).eq("user_id", userId).order("position").throwOnError();
     return (data ?? []).map(mapTask);
   },
   async addTask(userId, orderId, d) {
     const db = supabaseAdmin();
-    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle();
+    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle().throwOnError();
     if (!order.data) return null;
-    const { count } = await db.from("order_tasks").select("id", { count: "exact", head: true }).eq("order_id", orderId);
-    const { data } = await db.from("order_tasks").insert({ order_id: orderId, user_id: userId, title: d.title, is_client_requirement: d.isClientRequirement, status: d.status, position: count ?? 0 }).select().single();
-    if (data) await db.from("order_activity").insert({ order_id: orderId, user_id: userId, kind: "task_added", detail: `Task added: ${d.title}` });
+    const { count } = await db.from("order_tasks").select("id", { count: "exact", head: true }).eq("order_id", orderId).eq("user_id", userId).throwOnError();
+    const { data } = await db.from("order_tasks").insert({ order_id: orderId, user_id: userId, title: d.title, is_client_requirement: d.isClientRequirement, status: d.status, position: count ?? 0 }).select().single().throwOnError();
+    if (data) await db.from("order_activity").insert({ order_id: orderId, user_id: userId, kind: "task_added", detail: `Task added: ${d.title}` }).throwOnError();
     return data ? mapTask(data) : null;
   },
   async updateTask(userId, orderId, taskId, patch) {
     const db = supabaseAdmin();
-    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle();
+    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle().throwOnError();
     if (!order.data) return null;
-    const { data } = await db.from("order_tasks").update({ title: patch.title, status: patch.status }).eq("id", taskId).eq("order_id", orderId).eq("user_id", userId).select().maybeSingle();
-    if (data) await db.from("order_activity").insert({ order_id: orderId, user_id: userId, kind: "task_updated", detail: `Task updated: ${(data as Record<string, string>)["title"]}` });
+    const { data } = await db.from("order_tasks").update({ title: patch.title, status: patch.status }).eq("id", taskId).eq("order_id", orderId).eq("user_id", userId).select().maybeSingle().throwOnError();
+    if (data) await db.from("order_activity").insert({ order_id: orderId, user_id: userId, kind: "task_updated", detail: `Task updated: ${(data as Record<string, string>)["title"]}` }).throwOnError();
     return data ? mapTask(data) : null;
   },
   async deleteTask(userId, orderId, taskId) {
     const db = supabaseAdmin();
-    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle();
+    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle().throwOnError();
     if (!order.data) return false;
-    const { error } = await db.from("order_tasks").delete().eq("id", taskId).eq("order_id", orderId).eq("user_id", userId);
+    const { error } = await db.from("order_tasks").delete().eq("id", taskId).eq("order_id", orderId).eq("user_id", userId).throwOnError();
     return !error;
   },
   async listActivity(userId, orderId) {
     const db = supabaseAdmin();
-    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle();
+    const order = await db.from("orders").select("id").eq("user_id", userId).eq("id", orderId).maybeSingle().throwOnError();
     if (!order.data) return [];
-    const { data } = await db.from("order_activity").select("*").eq("order_id", orderId).order("created_at", { ascending: false });
+    const { data } = await db.from("order_activity").select("*").eq("order_id", orderId).eq("user_id", userId).order("created_at", { ascending: false }).throwOnError();
     return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
       id: r["id"] as ID,
       orderId: r["order_id"] as ID,
@@ -366,12 +353,12 @@ export const supabaseRepo: Repo = {
   },
   async ordersForClient(userId, clientId) {
     const db = supabaseAdmin();
-    const { data } = await db.from("orders").select("*").eq("user_id", userId).eq("client_id", clientId).order("created_at", { ascending: false });
+    const { data } = await db.from("orders").select("*").eq("user_id", userId).eq("client_id", clientId).order("created_at", { ascending: false }).throwOnError();
     return (data ?? []).map(mapOrder);
   },
   async getAISettings(userId) {
     const db = supabaseAdmin();
-    const { data } = await db.from("ai_settings").select("*").eq("user_id", userId).maybeSingle();
+    const { data } = await db.from("ai_settings").select("*").eq("user_id", userId).maybeSingle().throwOnError();
     if (!data) return null;
     const r = data as Record<string, unknown>;
     return {
@@ -386,7 +373,7 @@ export const supabaseRepo: Repo = {
     const { data } = await db.from("ai_settings").upsert({
       user_id: userId, provider: s.provider, model: s.model,
       key_ciphertext: s.keyCiphertext, key_hint: s.keyHint,
-    }, { onConflict: "user_id" }).select().single();
+    }, { onConflict: "user_id" }).select().single().throwOnError();
     const r = must(data, "ai_settings") as unknown as Record<string, unknown>;
     return {
       userId, provider: r["provider"] as AISettings["provider"],
@@ -397,7 +384,7 @@ export const supabaseRepo: Repo = {
   },
   async getAIKeyCiphertext(userId) {
     const db = supabaseAdmin();
-    const { data } = await db.from("ai_settings").select("key_ciphertext").eq("user_id", userId).maybeSingle();
+    const { data } = await db.from("ai_settings").select("key_ciphertext").eq("user_id", userId).maybeSingle().throwOnError();
     return ((data as Record<string, unknown> | null)?.["key_ciphertext"] as string) ?? null;
   },
 };

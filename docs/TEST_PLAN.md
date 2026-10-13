@@ -1,28 +1,32 @@
 # Test plan
 
-## Automated (vitest, `tests/`)
+`npm run typecheck`, `npm test`, and `npm run build` must pass. CI runs all three.
 
-1. `schemas.test.ts` — proposal validation accepts good payloads; rejects
-   invented-price/deadline gaps per rules, bad enums, oversized arrays.
-2. `dates.test.ts` — weekday resolution (“Friday” from Tue 2026-10-13 in
-   Africa/Cairo → Fri 16 Oct; “next Friday” → Fri 23 Oct per the documented
-   convention), date-only stays date-only, ambiguous flagging.
-3. `offline.test.ts` — EN + Egyptian Arabic + mixed fixtures produce proposals
-   with explicit/suggested separation and no invented prices.
-4. `transitions.test.ts` — only legal order/task transitions pass.
-5. `idempotency.test.ts` — double confirm → one order, same id, correct tasks.
-6. `authz.test.ts` — cross-user client/order/conversation access denied at repo
-   level for both backends' shared logic.
+- `schemas.test.ts`, `production.test.ts`: boundary validation, impossible dates,
+  IANA timezone checks, manual creation without an intake key, production
+  configuration failure, and suppression of sensitive upstream error bodies.
+- `dates.test.ts`, `offline.test.ts`: relative deadlines, English/Egyptian Arabic
+  and mixed requests, unknown budgets, explicit/suggested requirements.
+- `rules.test.ts`: order transitions, task progress, and overdue behavior.
+- `repo.test.ts`: development-store idempotency, authorization, passwords.
+- `crypto.test.ts`: encryption round trips, key hints, invalid secret handling.
+- `database.test.ts`: executes 0001 and 0002 in PGlite with Supabase-like roles;
+  verifies privileged RPC access denial, owner checks, proposal/conversation
+  matching, idempotent confirmation, key reuse rejection, direct-write denial,
+  owner RLS reads, atomic manual creation/rollback, and shared rate limiting.
 
-## Manual checklist
+`node scripts/smoke.mjs` against a local dev server checks signup, conversation
+creation, offline intake, answers, confirmation/retry, task updates, legal/illegal
+transitions, and a second account's isolation.
 
-- [ ] Signup → onboarding prefs → home empty state with examples.
-- [ ] Paste EN request → proposal → edit → confirm → order link; refresh persists.
-- [ ] Paste incomplete request → ≤3 questions → answer → proposal updates.
-- [ ] AR + mixed-language intake works.
-- [ ] Provider failure (bad key) → error + retry, input preserved.
-- [ ] Double-click Create → one order.
-- [ ] Manual order/client/task CRUD with no AI key.
-- [ ] Search/filter/sort + empty states; overdue badge.
-- [ ] Mobile 360px layout + bottom nav; full keyboard flow; focus visible.
-- [ ] `npm run typecheck`, `npm test`, `npm run build` green.
+Browser QA: signup/signin, confirmation feedback, intake → editable preview →
+order, refreshed preview values, manual orders with tasks, network failure/retry,
+mobile 360px layout on all main pages, sign-out, keyboard focus, and form labels.
+
+The live release gates in `docs/DEPLOYMENT.md` are mandatory before claiming
+public-launch readiness. Local SQL/API checks do not verify real Supabase email
+delivery, cookie refresh, production persistence, or an actual AI provider.
+
+`middleware.test.ts` verifies same-origin loopback Host handling, cross-origin
+rejection, production fail-closed behavior, refreshed cookies on both downstream
+requests and responses, and shared limiter Retry-After responses.

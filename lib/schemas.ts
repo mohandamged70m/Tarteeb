@@ -1,10 +1,13 @@
 import { z } from "zod";
+import { isValidIANA } from "./dates";
 
-export const MAX_INPUT_CHARS = Number(process.env.AI_MAX_INPUT_CHARS ?? 12000) || 12000;
+export const MAX_INPUT_CHARS = Math.min(12000, Math.max(1, Number(process.env.AI_MAX_INPUT_CHARS ?? 12000) || 12000));
+const timezone = z.string().min(1).max(80).refine(isValidIANA, "Use a valid IANA timezone");
 
 const dateISO = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "deadline must be date-only YYYY-MM-DD");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "deadline must be date-only YYYY-MM-DD")
+  .refine((s) => !Number.isNaN(Date.parse(s)) && new Date(s).toISOString().slice(0, 10) === s, "Use a real calendar date");
 
 export const requirementSchema = z.object({
   text: z.string().min(1).max(500),
@@ -56,7 +59,7 @@ export type ProposalPayloadInput = z.infer<typeof proposalPayloadSchema>;
 export const intakeMessageSchema = z.object({
   conversationId: z.string().uuid(),
   content: z.string().min(1).max(MAX_INPUT_CHARS),
-  timezone: z.string().min(1).max(80).optional(),
+  timezone: timezone.optional(),
 });
 
 export const intakeAnswerSchema = z.object({
@@ -71,7 +74,7 @@ export const intakeAnswerSchema = z.object({
     )
     .min(1)
     .max(5),
-  timezone: z.string().min(1).max(80).optional(),
+  timezone: timezone.optional(),
 });
 
 export const confirmIntakeSchema = z.object({
@@ -100,6 +103,7 @@ export const confirmIntakeSchema = z.object({
 });
 
 export const orderCreateSchema = confirmIntakeSchema.omit({
+  idempotencyKey: true,
   conversationId: true,
   proposalId: true,
 });
@@ -140,7 +144,7 @@ export const clientPatchSchema = clientCreateSchema.partial();
 
 export const settingsPatchSchema = z.object({
   displayName: z.string().min(1).max(120).optional(),
-  timezone: z.string().min(1).max(80).optional(),
+  timezone: timezone.optional(),
   defaultCurrency: z.string().regex(/^[A-Z]{3}$/).optional(),
 });
 
@@ -154,7 +158,7 @@ export const signupSchema = z.object({
   email: z.string().email().max(320),
   password: z.string().min(8).max(200),
   displayName: z.string().min(1).max(120),
-  timezone: z.string().min(1).max(80).optional(),
+  timezone: timezone.optional(),
   defaultCurrency: z.string().regex(/^[A-Z]{3}$/).optional(),
 });
 

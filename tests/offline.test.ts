@@ -41,3 +41,14 @@ describe("offline extractor", () => {
     expect(p.requirements.every((r) => r.source === "explicit" || r.source === "suggested")).toBe(true);
   });
 });
+
+it("does not confuse a section count or deadline with an explicit price", () => {
+  const p = extractOffline("Ahmed wants a landing page, 5 sections, delivery 2026-10-16, budget 8,000 EGP.", ctx);
+  expect(p.budget).toMatchObject({ amount: 8000, currency: "EGP", unknown: false });
+  const unknown = extractOffline("Landing page with 5 sections, budget undecided.", ctx);
+  expect(unknown.budget).toMatchObject({ amount: null, currency: null, unknown: true });
+});
+it("recognizes money symbols before amounts and Arabic digits", () => {
+  expect(extractOffline("Logo, 3 revisions, budget $250", ctx).budget).toMatchObject({ amount: 250, currency: "USD" });
+  expect(extractOffline("لوجو ٣ نسخ بميزانية ٢٠٠٠ جنيه", ctx).budget).toMatchObject({ amount: 2000, currency: "EGP" });
+});

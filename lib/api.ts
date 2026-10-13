@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodType, ZodTypeDef } from "zod";
 
 export function ok(data: unknown, status = 200): NextResponse {
-  return NextResponse.json(data, { status });
+  return NextResponse.json(data, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 
 export function fail(
@@ -12,7 +12,7 @@ export function fail(
 ): NextResponse {
   return NextResponse.json(
     { error: { code, message, retryable: opts.retryable ?? false, fields: opts.fields } },
-    { status: opts.status ?? 400 }
+    { status: opts.status ?? 400, headers: { "Cache-Control": "private, no-store" } }
   );
 }
 

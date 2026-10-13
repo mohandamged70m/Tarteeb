@@ -52,7 +52,9 @@ Everything except real-model AI works end to end.
 
 ## Full setup (production-like)
 
-1. Create a Supabase project; run `supabase/migrations/0001_init.sql` in the SQL editor.
+1. Create a Supabase project; apply `supabase/migrations/0001_init.sql`, then
+   `0002_public_launch.sql` in order. Configure email confirmation as described
+   in `docs/DEPLOYMENT.md`.
 2. Fill in `.env`: `APP_SECRET` (≥32 chars, `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`),
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
    `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL`.
@@ -67,8 +69,9 @@ Everything except real-model AI works end to end.
 | `npm run dev`      | Local dev server                     |
 | `npm run build`    | Production build                     |
 | `npm start`        | Serve production build               |
+| `npm run check:env` | Validate required production settings |
 | `npm run typecheck`| Strict type check                    |
-| `npm test`         | Unit tests (vitest, 31 tests)          |
+| `npm test`         | Unit + production SQL regression tests          |
 | `node scripts/smoke.mjs` | Live E2E smoke (needs dev server; `SMOKE_BASE` url) |
 
 ## Documentation
@@ -95,4 +98,6 @@ Everything except real-model AI works end to end.
 - No team workspaces, client portals, billing, or invoices.
 - AI needs either a user key, an operator key, or it falls back to the offline assistant
   (rule-based; good for structure, not a real model).
-- Local dev store is single-process file-backed — fine for solo dev, not for production.
+- Local dev store is single-process file-backed and disabled in production.
+- A passing build is not a public-launch signoff: the production SQL migration,
+  SMTP confirmation, durable data, and real-provider AI still need live verification.

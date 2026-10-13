@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { assertProductionConfig } from "./env";
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(
@@ -22,6 +23,7 @@ interface CookieToSet {
 }
 
 export async function supabaseServer(): Promise<SupabaseClient> {
+  assertProductionConfig();
   const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,8 +46,10 @@ export async function supabaseServer(): Promise<SupabaseClient> {
 }
 
 export function supabaseAdmin(): SupabaseClient {
+  assertProductionConfig();
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

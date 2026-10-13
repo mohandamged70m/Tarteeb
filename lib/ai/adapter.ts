@@ -55,12 +55,13 @@ export async function runIntake(input: IntakeInput): Promise<IntakeResult> {
   }
 
   if (!apiKey) {
-    const payload = extractOffline(input.content, {
+    const content = [...input.history.filter((h) => h.role === "user").map((h) => h.content), input.content, input.priorAnswers ?? ""].join("\n");
+    const payload = proposalPayloadSchema.parse(extractOffline(content, {
       todayISO: ctx.todayISO,
       todayWeekday: ctx.todayWeekday,
       timezone: ctx.timezone,
       defaultCurrency: ctx.defaultCurrency,
-    });
+    }));
     return { payload, assistantLabel: "Offline draft — not a real model" };
   }
 

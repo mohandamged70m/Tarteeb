@@ -57,8 +57,7 @@ export async function chatCompletionsJSON(opts: {
       throw new AIError("rate_limited", "Rate limited by the provider. Wait a moment and retry.", true, 429);
     }
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new AIError("provider", `Provider error (${res.status}). ${text.slice(0, 200)}`, res.status >= 500, res.status);
+      throw new AIError("provider", `The AI provider returned an error (${res.status}). Retry or check your settings.`, res.status >= 500, res.status);
     }
     const json = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
@@ -71,7 +70,7 @@ export async function chatCompletionsJSON(opts: {
     if (e instanceof DOMException && e.name === "AbortError") {
       throw new AIError("timeout", "The AI request timed out. Retry.", true);
     }
-    throw new AIError("provider", `Network error: ${(e as Error).message}`, true);
+    throw new AIError("provider", "Could not reach the AI provider. Retry shortly.", true);
   } finally {
     clearTimeout(timer);
   }
