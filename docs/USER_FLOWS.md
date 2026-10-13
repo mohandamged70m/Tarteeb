@@ -15,8 +15,10 @@ flowchart LR
 1. Visit `/` unauthenticated → redirected to `/login`.
 2. Sign up (`/signup`): email + password + display name → profile created with
    defaults (timezone guessed from browser, currency EGP|USD… default EGP).
-3. Lands on Home with empty state: short explanation + 3 realistic example prompts
-   (EN landing page, AR logo request, mixed-language edit round) → click fills composer.
+3. Lands on Home with a centered empty state: heading “What did your client ask
+   for?”, a large rounded composer (~760px desktop, fluid mobile), and 3 subtle
+   example-message chips (EN landing page, AR logo request, mixed-language edit
+   round) → click fills the composer without submitting. No dashboard cards or stats.
 4. Optional: Settings → AI → paste key → Test connection → Save.
 
 ## 2. Intake — happy path (complete request)

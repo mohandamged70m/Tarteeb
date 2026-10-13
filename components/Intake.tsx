@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { ChatMessage, Client, Conversation, Proposal } from "@/lib/types";
-import { btnGhost, btnPrimary, EmptyState, ErrorState } from "./ui";
+import { btnGhost, ErrorState } from "./ui";
 
 const EXAMPLES = [
   "Ahmed wants a landing page for his gym, 5 sections, delivery next Friday, budget 8000 EGP.",
   "أحمد عايز لاندنج بيج للجيم بتاعه تتسلم الجمعة الجاية.",
   "Client: Sara — logo + Instagram templates, needs it before end of month, budget undecided.",
 ];
+
+const MAX_INPUT = 12000;
 
 interface ThreadData {
   conversation: Conversation;
@@ -19,6 +21,10 @@ interface ThreadData {
 }
 
 type SendState = "idle" | "sending" | "error";
+
+function shortChip(text: string): string {
+  return text.length > 64 ? `${text.slice(0, 64)}…` : text;
+}
 
 export default function Intake({ initialId }: { initialId: string | null }) {
   const [convs, setConvs] = useState<Conversation[]>([]);
@@ -134,64 +140,72 @@ export default function Intake({ initialId }: { initialId: string | null }) {
 
   const confirmed = thread?.conversation.status === "confirmed" || Boolean(thread?.orderId);
   const proposal = thread?.proposal && thread.proposal.status !== "superseded" ? thread.proposal : null;
+  const hasMessages = (thread?.messages.length ?? 0) > 0;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
-      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink-100">New intake</h1>
-          <p className="mt-1 text-sm text-ink-500">
-            Paste a client message. I&apos;ll structure it, ask what&apos;s missing, and draft the order.
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {convs.length > 0 && (
-            <select
-              aria-label="Past conversations"
-              value={currentId ?? ""}
-              onChange={(e) => {
-                setCurrentId(e.target.value);
-                loadThread(e.target.value);
-              }}
-              className="max-w-40 rounded-md border border-ink-700 bg-ink-850 px-2 py-2 text-sm text-ink-300"
-            >
-              <option value="" disabled>History…</option>
-              {convs.map((c) => (
-                <option key={c.id} value={c.id}>{c.title}</option>
-              ))}
-            </select>
-          )}
+    <div className="mx-auto flex w-full max-w-[760px] flex-col px-4">
+      {/* Minimal thread toolbar — history + new chat, no dashboard chrome */}
+      <div className="flex items-center justify-end gap-2 py-3">
+        {convs.length > 0 && (
+          <select
+            aria-label="Past conversations"
+            value={currentId ?? ""}
+            onChange={(e) => {
+              setCurrentId(e.target.value);
+              loadThread(e.target.value);
+            }}
+            className="max-w-40 rounded-md border border-ink-700 bg-ink-850 px-2 py-2 text-sm text-ink-300"
+          >
+            <option value="" disabled>History…</option>
+            {convs.map((c) => (
+              <option key={c.id} value={c.id}>{c.title}</option>
+            ))}
+          </select>
+        )}
+        {(thread || convs.length > 0) && (
           <button type="button" onClick={startNew} className={btnGhost}>
             + New
           </button>
-        </div>
+        )}
       </div>
 
       {loadError && <ErrorState message={loadError} onRetry={() => currentId && loadThread(currentId)} />}
 
       {!thread && !loading && (
-        <EmptyState
-          title="Paste your first client message below"
-          hint="Example prompts — click one to fill the composer:"
-        />
-      )}
-      {!thread && !loading && (
-        <div className="flex flex-col gap-2">
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              type="button"
-              onClick={() => setDraft(ex)}
-              className="rounded-lg border border-ink-700 bg-ink-900 px-4 py-3 text-left text-sm text-ink-300 hover:bg-ink-800"
-            >
-              <span dir="auto">{ex}</span>
-            </button>
-          ))}
+        <div className="flex min-h-[calc(100dvh-240px)] flex-col items-center justify-center py-10 text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-ink-100">
+            What did your client ask for?
+          </h1>
+          <div className="mt-6 w-full">
+            <Composer draft={draft} onDraft={setDraft} onSend={send} sendState={sendState} />
+          </div>
+          <div className="mt-4 flex w-full flex-wrap items-center justify-center gap-2">
+            {EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                title={ex}
+                onClick={() => setDraft(ex)}
+                className="max-w-full truncate rounded-full border border-ink-700 bg-transparent px-3 py-1.5 text-xs text-ink-500 hover:border-ink-500 hover:text-ink-300"
+              >
+                <span dir="auto">{shortChip(ex)}</span>
+              </button>
+            ))}
+          </div>
+          {sendError && (
+            <div role="alert" className="mt-4 w-full rounded-2xl border border-ink-700 bg-ink-900 px-4 py-3 text-left text-sm">
+              <p className="font-medium text-ink-100">The assistant hit a problem</p>
+              <p className="mt-1 text-ink-500">{sendError}</p>
+              <button type="button" onClick={send} className={`${btnGhost} mt-2`}>
+                Retry
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {loading && (
-        <div className="flex flex-col gap-3" aria-label="Loading conversation">
+        <div className="flex flex-col gap-3 py-6" aria-label="Loading conversation">
           <div className="skeleton h-12 w-3/4" />
           <div className="skeleton h-24 w-full" />
           <div className="skeleton h-12 w-2/3" />
@@ -199,33 +213,42 @@ export default function Intake({ initialId }: { initialId: string | null }) {
       )}
 
       {thread && (
-        <div aria-live="polite" className="flex flex-col gap-3">
-          {thread.messages.map((m) => (
-            <article
-              key={m.id}
-              className={`rounded-lg border px-4 py-3 text-sm leading-7 ${
-                m.role === "user"
-                  ? "border-ink-700 bg-ink-900 text-ink-100"
-                  : "border-ink-700 bg-ink-850 text-ink-300"
-              }`}
-            >
-              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-500">
-                {m.role === "user" ? "You pasted" : thread.proposal?.assistantLabel ?? "Assistant"}
-              </p>
-              <p dir="auto" className="whitespace-pre-wrap">{m.content}</p>
-            </article>
-          ))}
+        <div aria-live="polite" className="flex flex-col gap-6 py-2 pb-8">
+          {thread.messages.map((m) =>
+            m.role === "user" ? (
+              <div key={m.id} className="flex justify-end">
+                <div
+                  dir="auto"
+                  className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-ink-800 px-4 py-2.5 text-[15px] leading-7 text-ink-100"
+                >
+                  <span className="sr-only">You: </span>
+                  {m.content}
+                </div>
+              </div>
+            ) : (
+              <div key={m.id} className="flex justify-start">
+                <div
+                  dir="auto"
+                  className="w-full whitespace-pre-wrap text-[15px] leading-7 text-ink-300"
+                >
+                  <span className="sr-only">Assistant: </span>
+                  {m.content}
+                </div>
+              </div>
+            ),
+          )}
           {sendState === "sending" && (
-            <div className="rounded-lg border border-ink-700 bg-ink-850 px-4 py-3 text-sm text-ink-500" role="status">
+            <div className="flex items-center gap-2 text-sm text-ink-500" role="status">
+              <span aria-hidden="true" className="inline-block h-2 w-2 animate-pulse rounded-full bg-ink-500" />
               Working — structuring your request…
             </div>
           )}
-          <div ref={bottomRef} />
+          <div ref={bottomRef} className="scroll-mb-44" />
         </div>
       )}
 
-      {sendError && (
-        <div role="alert" className="rounded-lg border border-ink-700 bg-ink-900 px-4 py-3 text-sm">
+      {thread && sendError && (
+        <div role="alert" className="mb-4 rounded-2xl border border-ink-700 bg-ink-900 px-4 py-3 text-sm">
           <p className="font-medium text-ink-100">The assistant hit a problem</p>
           <p className="mt-1 text-ink-500">{sendError}</p>
           <button type="button" onClick={send} className={`${btnGhost} mt-2`}>
@@ -234,8 +257,8 @@ export default function Intake({ initialId }: { initialId: string | null }) {
         </div>
       )}
 
-      {confirmed && thread?.orderId && (
-        <div className="rounded-lg border border-ink-700 bg-ink-900 px-4 py-3 text-sm">
+      {thread && confirmed && thread?.orderId && (
+        <div className="mb-4 rounded-2xl border border-ink-700 bg-ink-900 px-4 py-3 text-sm">
           <p className="text-ink-300">
             ✓ Order created.{" "}
             <Link href={`/orders/${thread.orderId}`} className="font-semibold text-ink-100 underline underline-offset-2">
@@ -246,46 +269,115 @@ export default function Intake({ initialId }: { initialId: string | null }) {
         </div>
       )}
 
-      {proposal && !confirmed && (
-        <ClarifyAndPreview
-          key={proposal.id}
-          proposal={proposal}
-          conversationId={thread!.conversation.id}
-          clients={clients}
-          onRefresh={async () => {
-            await loadThread(thread!.conversation.id);
-            const r = await fetch("/api/clients");
-            if (r.ok) setClients((await r.json()).clients);
-          }}
-        />
+      {thread && proposal && !confirmed && (
+        <div className="mb-6">
+          <ClarifyAndPreview
+            key={proposal.id}
+            proposal={proposal}
+            conversationId={thread!.conversation.id}
+            clients={clients}
+            onRefresh={async () => {
+              await loadThread(thread!.conversation.id);
+              const r = await fetch("/api/clients");
+              if (r.ok) setClients((await r.json()).clients);
+            }}
+          />
+        </div>
       )}
 
-      {/* Composer */}
-      <div className="sticky bottom-16 rounded-xl border border-ink-700 bg-ink-850 p-3 md:bottom-4">
-        <label htmlFor="composer" className="sr-only">Paste a client message</label>
-        <textarea
-          id="composer"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") send();
-          }}
-          rows={3}
-          maxLength={12000}
-          placeholder="Paste a client message… (Ctrl+Enter to send)"
-          className="max-h-50 w-full resize-y rounded-md bg-transparent px-2 py-1 text-base text-ink-100 placeholder:text-ink-500"
-        />
-        <div className="mt-2 flex items-center justify-between">
-          <span className="tnum text-xs text-ink-500">{draft.length.toLocaleString()} / 12,000</span>
-          <button
-            type="button"
-            onClick={send}
-            disabled={!draft.trim() || sendState === "sending"}
-            className={btnPrimary}
-          >
-            {sendState === "sending" ? "Working…" : "Send"}
-          </button>
+      {/* Docked composer once the conversation exists */}
+      {thread && (
+        <div className="sticky bottom-[76px] z-10 bg-ink-950/95 pb-3 pt-2 backdrop-blur md:bottom-4">
+          <Composer draft={draft} onDraft={setDraft} onSend={send} sendState={sendState} />
+          {!hasMessages && (
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  title={ex}
+                  onClick={() => setDraft(ex)}
+                  className="max-w-full truncate rounded-full border border-ink-700 bg-transparent px-3 py-1.5 text-xs text-ink-500 hover:border-ink-500 hover:text-ink-300"
+                >
+                  <span dir="auto">{shortChip(ex)}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+      )}
+    </div>
+  );
+}
+
+function Composer({
+  draft,
+  onDraft,
+  onSend,
+  sendState,
+}: {
+  draft: string;
+  onDraft: (v: string) => void;
+  onSend: () => void;
+  sendState: SendState;
+}) {
+  const areaRef = useRef<HTMLTextAreaElement>(null);
+  const composingRef = useRef(false);
+  const sending = sendState === "sending";
+  const canSend = draft.trim().length > 0 && !sending;
+
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [draft]);
+
+  return (
+    <div className="rounded-3xl border border-ink-700 bg-ink-850 p-3 shadow-[0_8px_30px_rgba(0,0,0,0.35)] transition-colors focus-within:border-ink-500 focus-within:ring-2 focus-within:ring-ink-100/15">
+      <label htmlFor="composer" className="sr-only">Paste a client message</label>
+      <textarea
+        id="composer"
+        ref={areaRef}
+        value={draft}
+        onChange={(e) => onDraft(e.target.value)}
+        onCompositionStart={() => { composingRef.current = true; }}
+        onCompositionEnd={() => { composingRef.current = false; }}
+        onKeyDown={(e) => {
+          if (e.nativeEvent.isComposing || composingRef.current || e.keyCode === 229) return;
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            onSend();
+          }
+        }}
+        rows={3}
+        maxLength={MAX_INPUT}
+        placeholder="Paste your client’s message…"
+        disabled={sending}
+        className="max-h-[200px] w-full resize-none bg-transparent px-2 py-1 text-base leading-6 text-ink-100 placeholder:text-ink-500 focus:outline-none disabled:opacity-60"
+      />
+      <div className="mt-1 flex items-center justify-between gap-2 px-1">
+        <span className="tnum text-[11px] text-ink-500/70" aria-label={`${draft.length} of ${MAX_INPUT} characters`}>
+          {draft.length.toLocaleString()} / 12,000
+        </span>
+        <button
+          type="button"
+          onClick={onSend}
+          disabled={!canSend}
+          aria-label={sending ? "Working" : "Send message"}
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink-100 text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-ink-700 disabled:text-ink-500"
+        >
+          {sending ? (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="animate-spin">
+              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3" />
+              <path d="M14 8a6 6 0 0 0-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
       </div>
     </div>
   );
@@ -386,15 +478,13 @@ function ClarifyAndPreview({
   }
 
   return (
-    <section aria-label="Order proposal" className="flex flex-col gap-4 rounded-xl border border-ink-700 bg-ink-900 p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-ink-100">
-          Order preview <span className="ml-1 text-xs font-normal text-ink-500">({proposal.status} · editable)</span>
-        </h2>
-      </div>
-
+    <details open aria-label="Order proposal" className="rounded-2xl border border-ink-700 bg-ink-900">
+      <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-ink-100 marker:hidden [&::-webkit-details-marker]:hidden">
+        Order preview <span className="ml-1 text-xs font-normal text-ink-500">({proposal.status} · editable — expand to review)</span>
+      </summary>
+      <div className="flex flex-col gap-3 border-t border-ink-700 p-4">
       {p.missingEssential.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-lg border border-ink-700 bg-ink-850 p-3">
+        <div className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-850 p-3">
           <p className="text-sm font-medium text-ink-100">A few questions to finish the draft</p>
           {p.missingEssential.map((q) => (
             <div key={q.field} className="flex flex-col gap-1">
@@ -452,10 +542,20 @@ function ClarifyAndPreview({
           <span className="font-medium text-ink-300">Deliverables (one per line)</span>
           <textarea value={deliverables} onChange={(e) => setDeliverables(e.target.value)} rows={3} className="rounded-md border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100" />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-ink-300">Requirements (one per line)</span>
-          <textarea value={requirements} onChange={(e) => setRequirements(e.target.value)} rows={3} className="rounded-md border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100" />
-        </label>
+          <textarea
+            value={requirements}
+            onChange={(e) => setRequirements(e.target.value)}
+            rows={3}
+            aria-describedby="req-source-note"
+            className="rounded-md border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100"
+          />
+          <span id="req-source-note" className="text-xs text-ink-500">
+            {p.requirements.filter((r) => r.source === "explicit").length} from client ·{" "}
+            {p.requirements.filter((r) => r.source === "suggested").length} suggested
+          </span>
+        </div>
         <div className="flex gap-2">
           <label className="flex flex-1 flex-col gap-1 text-sm">
             <span className="font-medium text-ink-300">Deadline</span>
@@ -469,10 +569,20 @@ function ClarifyAndPreview({
             </div>
           </label>
         </div>
-        <label className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-ink-300">Tasks (one per line)</span>
-          <textarea value={tasks} onChange={(e) => setTasks(e.target.value)} rows={3} className="rounded-md border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100" />
-        </label>
+          <textarea
+            value={tasks}
+            onChange={(e) => setTasks(e.target.value)}
+            rows={3}
+            aria-describedby="task-source-note"
+            className="rounded-md border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100"
+          />
+          <span id="task-source-note" className="text-xs text-ink-500">
+            {p.tasks.filter((t) => t.isClientRequirement).length} client-required ·{" "}
+            {p.tasks.filter((t) => !t.isClientRequirement).length} suggested — new lines default to suggested
+          </span>
+        </div>
       </div>
 
       {p.deadline.interpretation && (
@@ -493,12 +603,13 @@ function ClarifyAndPreview({
             type="button"
             onClick={confirm}
             disabled={confirmState === "pending" || title.trim().length < 3}
-            className={btnPrimary}
+            className="rounded-md bg-ink-100 px-4 py-2 text-sm font-semibold text-black hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {confirmState === "pending" ? "Creating…" : confirmState === "error" ? "Retry — create order" : "Create order"}
           </button>
         </div>
       )}
-    </section>
+      </div>
+    </details>
   );
 }

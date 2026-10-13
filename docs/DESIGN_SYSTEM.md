@@ -30,22 +30,31 @@ fallbacks); `dir="auto"` on user content.
 
 ## 3. Spacing & layout
 
-4px base; panels `p-4/6`; message gutter `gap-3`; sidebar 260px collapsible to
+4px base; panels `p-4/6`; message gutter `gap-6`; sidebar 260px collapsible to
 icon rail on small screens → bottom tab bar on mobile (`Home Orders Clients
-Settings`). Composer: sticky bottom, multiline textarea (auto-grow to 200px),
-Send on `Ctrl/Cmd+Enter`, prominent full-width on Home.
+Settings`). Home chat column is centered `max-w-[760px]`, fluid on mobile.
+Empty state is a centered heading (“What did your client ask for?”) + large
+composer + three subtle example chips (click fills, never submits). In-thread
+composer is sticky above the mobile tab bar (`bottom-[76px]`, `md:bottom-4`)
+with page bottom padding so it never covers messages. User turns are compact
+right-aligned bubbles; assistant turns are plain left-aligned text.
 
 ## 4. Components
 
 - **Sidebar / MobileNav:** Home, Orders, Clients, Settings + “New intake”.
   Active item = white left tick + semibold label (not color alone).
-- **Composer:** labelled textarea, char count near limit, processing spinner with
-  “Working…” text, Retry on failure.
-- **ChatThread:** user right-ish plain, assistant on subtle surface; code-free
-  prose; timestamps relative + absolute title.
-- **OrderPreview:** section list (title, client, deliverables, requirements with
-  explicit/suggested tags, deadline + interpretation, budget, tasks) — every field
-  editable inline; [Create order] explicit, disabled while pending.
+- **Composer:** dark charcoal rounded-3xl surface, auto-growing multiline
+  textarea (to 200px, `Shift+Enter` newline / `Enter` send with IME guard),
+  circular send button (up-arrow SVG) bottom-right, disabled when empty or
+  working, spinner + “Working…” status, quiet char counter (`12,000` max,
+  input preserved on failure).
+- **ChatThread:** user compact right-aligned bubble, assistant plain
+  left-aligned text with generous spacing; `aria-live="polite"`.
+- **OrderPreview:** compact expandable `<details>` section (title, client,
+  deliverables, requirements with explicit/suggested counts, deadline +
+  interpretation, budget, tasks with client-required/suggested counts) — every field
+  editable inline; [Create order] explicit, disabled while pending; same
+  idempotency key reused across retries.
 - **StatusBadge:** icon glyph + text (“In progress ▸”), never color-only.
 - **Empty/Loading/Error/Success/Disabled:** each list and form implements all
   five; skeletons use pulsing gray blocks (disabled under reduced motion).
